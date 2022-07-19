@@ -1,33 +1,17 @@
-### STAGE 1: Build ###
-FROM node:lts-alpine AS builder
+FROM nginx:1.17.1-alpine
 
-#### make the 'app' folder the current working directory
-WORKDIR /app
+RUN chmod g+rwx /var/cache/nginx  /var/run /var/log/nginx 
 
-#### copy both 'package.json' and 'package-lock.json' (if available)
-COPY package*.json ./
+RUN sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
 
-#### install project dependencies
-RUN npm install
+EXPOSE 8081
 
-#### copy things
-COPY . .
+RUN addgroup nginx root 
 
-#### generate build --prod
-RUN npm run build
+COPY dist/. /usr/share/nginx/html 
 
-FROM nginxinc/nginx-unprivileged
+COPY conf /etc/nginx
 
-USER root
+RUN chmod -R 777 /usr/share/nginx/html
 
-COPY --from=builder /app/dist/* /usr/share/nginx/html
-
-COPY nginx.conf /etc/nginx
-
-RUN chown -R 1001 /usr/share/nginx/html
-
-USER 1001
-
-EXPOSE 8080 
-
-CMD ["nginx", "-g", "daemon off;"]
+USER nginx
